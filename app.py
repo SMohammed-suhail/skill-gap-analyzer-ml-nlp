@@ -5,47 +5,33 @@ import os
 import random
 import string
 
-import fitz  # PyMuPDF
+import fitz  # from PyMuPDF
 import googleapiclient.discovery
 import googleapiclient.errors
 import requests
 from flask import Flask, render_template, redirect, request, session, url_for, flash
 from mistralai import Mistral
 
-# Firebase REST API for Authentication
-FIREBASE_WEB_API_KEY = "AIzaSyD7ks5VJzVrgZDoIMbx-4Ja3MwPVPeQA3Q"
-
-def firebase_signup(email, password):
-    url = f"https://identitytoolkit.googleapis.com/v1/accounts:signUp?key={FIREBASE_WEB_API_KEY}"
-    payload = {"email": email, "password": password, "returnSecureToken": True}
-    response = requests.post(url, json=payload)
-    return response.json()
-
-def firebase_login(email, password):
-    url = f"https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key={FIREBASE_WEB_API_KEY}"
-    payload = {"email": email, "password": password, "returnSecureToken": True}
-    response = requests.post(url, json=payload)
-    return response.json()
+# Environment variables (set these in Render dashboard)
+FIREBASE_WEB_API_KEY = os.environ.get("AIzaSyD7ks5VJzVrgZDoIMbx-4Ja3MwPVPeQA3Q)
+MISTRAL_API_KEY = os.environ.get("WTuMOibXWmpTqjvscYHSaaCOjjXCakkJ")
+ADZUNA_APP_ID = os.environ.get("b03f76e8")
+ADZUNA_APP_KEY = os.environ.get("3aba17aaa08c6bd408d4f71350fa835a")
+YOUTUBE_API_KEY = os.environ.get("AIzaSyCWQ5BsUYN7IG2wreRvDt5L8KEwmPbY9vQ")
 
 app = Flask(__name__)
-app.secret_key = "Qazwsx@123"
+app.secret_key = os.environ.get("FLASK_SECRET_KEY", "default_secret")
 
 # Mistral setup
-mistral_api_key = "WTuMOibXWmpTqjvscYHSaaCOjjXCakkJ"
 mistral_model = "pixtral-large-2411"
 try:
-    client = Mistral(api_key=mistral_api_key)
+    client = Mistral(api_key=MISTRAL_API_KEY)
     print("Mistral initialized")
 except Exception as e:
     print("Mistral init failed:", e)
     client = None
 
-# Adzuna keys
-ADZUNA_APP_ID = "b03f76e8"
-ADZUNA_APP_KEY = "3aba17aaa08c6bd408d4f71350fa835a"
-
 # YouTube API
-YOUTUBE_API_KEY = "AIzaSyCWQ5BsUYN7IG2wreRvDt5L8KEwmPbY9vQ"
 try:
     youtube = googleapiclient.discovery.build("youtube", "v3", developerKey=YOUTUBE_API_KEY)
 except:
@@ -61,7 +47,8 @@ def encode_image(img):
         return base64.b64encode(f.read()).decode("utf-8")
 
 def pdf_to_images(pdf_path, out_folder):
-    doc = fitz.open(pdf_path)
+    """Convert PDF to images using PyMuPDF."""
+    doc = fitz.open(pdf_path)  # works when PyMuPDF is installed, not 'fitz'
     mat = fitz.Matrix(2, 2)
     images = []
     for i, page in enumerate(doc):
@@ -71,6 +58,18 @@ def pdf_to_images(pdf_path, out_folder):
         images.append(img_path)
     doc.close()
     return images
+
+def firebase_signup(email, password):
+    url = f"https://identitytoolkit.googleapis.com/v1/accounts:signUp?key={FIREBASE_WEB_API_KEY}"
+    payload = {"email": email, "password": password, "returnSecureToken": True}
+    response = requests.post(url, json=payload)
+    return response.json()
+
+def firebase_login(email, password):
+    url = f"https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key={FIREBASE_WEB_API_KEY}"
+    payload = {"email": email, "password": password, "returnSecureToken": True}
+    response = requests.post(url, json=payload)
+    return response.json()
 
 def extract_keywords_from_image(img):
     if not client:
@@ -97,7 +96,6 @@ def analyze_skill_gap(resume_skills, job_title):
         "Return a JSON object with two keys: "
         "'missing_skills' (list of skills needed for the job but not in resume), "
         "'analysis' (a brief text analysis of the gap). "
-        "Example: {\"missing_skills\": [\"AWS\", \"Docker\"], \"analysis\": \"The resume lacks cloud and containerization skills...\"}"
     )
 
     try:
@@ -242,5 +240,3 @@ if __name__ == "__main__":
         os.makedirs("workspace")
     port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port)
-
-
