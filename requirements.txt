@@ -2,5 +2,7 @@ Flask==3.0.3
 gunicorn==23.0.0
 PyMuPDF==1.24.10
 google-api-python-client==2.149.0
-mistralai==0.4.2
 requests==2.32.3
+MarkupSafe==3.0.2
+mistralai==1.7.0
+mysql-connector==2.2.9
